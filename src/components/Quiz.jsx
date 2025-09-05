@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { questions } from "../data/questions";
 
 const Quiz = () => {
@@ -6,14 +6,34 @@ const Quiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(30);
+
+  useEffect(() => {
+    setTimeLeft(30);
+
+    const countdown = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    const timeout = setTimeout(() => {
+      handleNextQuestion();
+    }, 30000);
+
+    return () => {
+      clearInterval(countdown);
+      clearTimeout(timeout);
+    };
+  }, [currentQuestion]);
 
   function handleNextQuestion() {
     if (selectedOption === questions[currentQuestion].answer) {
       setScore((prevScore) => prevScore + 1);
     }
+
     setCurrentQuestion((prev) => prev + 1);
     setSelectedOption(null);
     setAnswerSelected(false);
+    setTimeLeft(30);
   }
 
   function handleOptionClick(option) {
@@ -21,22 +41,17 @@ const Quiz = () => {
     setAnswerSelected(true);
   }
 
-  // calculate progress percentage
-  const progress = Math.min(
-    ((currentQuestion + 1) / questions.length) * 100,
-    100
-  );
+  const progress = Math.min(((currentQuestion + 1) / questions.length) * 100, 100);
 
   if (currentQuestion >= questions.length) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
         <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-3xl p-8 w-full max-w-xl text-center">
-          <h1 className="text-3xl font-bold text-gray-800 mb-4">
-            Quiz Completed 🎉
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+            🎉 Quiz Completed!
           </h1>
-          <p className="text-lg text-gray-600 mb-6">
-            Your Score: <span className="font-bold">{score}</span> /{" "}
-            {questions.length}
+          <p className="text-xl text-gray-700 mb-6">
+            Your Score: <span className="font-bold">{score}</span> / {questions.length}
           </p>
           <button
             className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition"
@@ -54,17 +69,60 @@ const Quiz = () => {
     );
   }
 
+  // --- Small Circular Timer ---
+  const radius = 25;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (timeLeft / 30) * circumference;
+  const timerColor = timeLeft <= 5 ? "text-red-500" : "text-indigo-600";
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
-      {/* Quiz Card */}
-      <div className="bg-white/90 backdrop-blur-md shadow-2xl rounded-3xl p-8 w-full max-w-xl transform transition-transform duration-300">
+      <div className="bg-white/95 backdrop-blur-md shadow-2xl rounded-3xl p-8 w-full max-w-xl transform transition-transform duration-300 relative">
+        
+        {/* Floating Timer Top-Right */}
+        <div className="absolute top-4 right-4">
+          <svg width="60" height="60">
+            <circle
+              cx="30"
+              cy="30"
+              r={radius}
+              stroke="#e5e7eb"
+              strokeWidth="5"
+              fill="none"
+            />
+            <circle
+              cx="30"
+              cy="30"
+              r={radius}
+              stroke={timeLeft <= 5 ? "#f87171" : "#4f46e5"}
+              strokeWidth="5"
+              fill="none"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              transform="rotate(-90 30 30)"
+              style={{ transition: "stroke-dashoffset 1s linear, stroke 0.3s" }}
+            />
+            <text
+              x="50%"
+              y="50%"
+              dominantBaseline="middle"
+              textAnchor="middle"
+              className={`font-bold text-xs ${timerColor}`}
+            >
+              {timeLeft}s
+            </text>
+          </svg>
+        </div>
+
         {/* Header */}
-        <h1 className="text-2xl font-extrabold text-center text-gray-800 mb-6 drop-shadow-md">
-          Quiz App
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 drop-shadow-md">Quiz App</h1>
+          {/* <span className="text-gray-700 font-semibold">{currentQuestion + 1}/{questions.length}</span> */}
+        </div>
 
         {/* Question */}
-        <h2 className="text-lg leading-relaxed font-semibold text-gray-700 mb-6">
+        <h2 className="text-lg font-semibold text-gray-700 mb-6">
           {questions[currentQuestion].question}
         </h2>
 
@@ -75,19 +133,17 @@ const Quiz = () => {
               <button
                 disabled={isAnswerSelected}
                 onClick={() => handleOptionClick(option)}
-                className={`w-full text-left px-5 py-3 rounded-xl border 
-  ${
-    selectedOption === option
-      ? option === questions[currentQuestion].answer
-        ? "bg-green-500 text-white border-green-500"
-        : "bg-red-500 text-white border-red-500"
-      : "border-gray-300"
-  }
-  ${isAnswerSelected ? "cursor-not-allowed opacity-70" : ""}
-  hover:bg-indigo-500 hover:text-white hover:border-indigo-500
-  focus:outline-none focus:ring-4 focus:ring-indigo-300
-  shadow-sm hover:shadow-md transition-all duration-300
-  text-lg font-medium`}
+                className={`w-full text-left px-5 py-3 rounded-xl border font-medium text-lg
+                  transition-all duration-300 shadow-sm hover:shadow-md
+                  ${
+                    selectedOption === option
+                      ? option === questions[currentQuestion].answer
+                        ? "bg-green-500 text-white border-green-500"
+                        : "bg-red-500 text-white border-red-500"
+                      : "bg-white border-gray-300 hover:bg-indigo-500 hover:text-white hover:border-indigo-500"
+                  }
+                  ${isAnswerSelected ? "cursor-not-allowed opacity-80" : "cursor-pointer"}
+                `}
               >
                 {option}
               </button>
@@ -109,16 +165,13 @@ const Quiz = () => {
           Next
         </button>
 
-        {/* Progress Bar */}
-        <div className="mt-6">
+        {/* Bottom Progress Bar */}
+        <div className="mt-4">
           <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
             <div
               className="h-3 bg-indigo-500 rounded-full transition-all duration-500"
               style={{ width: `${progress}%` }}
             ></div>
-          </div>
-          <div className="text-sm text-gray-500 text-center mt-2">
-            {`Question ${currentQuestion + 1} of ${questions.length}`}
           </div>
         </div>
       </div>
